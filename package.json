@@ -39,6 +39,7 @@
     "@fontsource/fira-mono": "^4.5.0",
     "@lukeed/uuid": "^2.0.0",
     "cookie": "^0.4.1",
+    "crypto-js": "^4.1.1",
     "firebase": "^9.6.11"
   },
   "description": "Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).",
