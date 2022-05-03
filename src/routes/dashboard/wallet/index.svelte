@@ -1,10 +1,11 @@
 <script>
     import {onMount} from "svelte";
-    import {huobiAuthentication, huobiData} from "./huobi-client.ts";
+    import {Authentication, requestBuilder, urlBuilder} from "./huobi-client.ts";
     import {goto} from "$app/navigation";
     import {Routes} from "../../routes.ts";
+    import {u} from "../../../../.svelte-kit/output/client/_app/chunks/index-dd45c2ae.js";
 
-    export let response
+    export let data
     let walletBalance = 0
     let walletBalanceChange = 0
 
@@ -16,58 +17,16 @@
     const accessKeyId = "yh4fhmvs5k-3bd3a0a7-a2f59525-aacf6"
     const secretKey = "7822678b-d7a5b6dc-5e0afc87-61fca"
 
-    let huobiClient = new huobiAuthentication("/v1/account/accounts", accessKeyId, secretKey)
 
-    // export async function get() {
-    //     const res = await fetch(huobiClient.buildUrl())
-    //     const huobiCommon = await res.json()
-    //     if (huobiCommon) {
-    //         return {
-    //             body: { huobiCommon }
-    //         };
-    //     }
-    //
-    //     return {
-    //         status: 404
-    //     }
-    // }
-    // export async function get() {
-    //
-    //     const idSpotHuobi = "9570946"
-    //     const parameters = `AccessKeyId=${accessKeyId}&SignatureMethod=${signatureMethod}&SignatureVersion=${signatureVersion}&Timestamp=${date}&order-id=${orderId}`
-    //     const preSignedText = `GET\n${hostUrl}\n${endpointID}\n${parameters}`
-    //     const hash = hmacSHA256(preSignedText, secretKey);
-    //     const base64 = Base64.stringify(hash)
-    //     const url = `https://${hostUrl}${endpointID}?${parameters}&Signature=${base64}`
-    //
-    //     const urlObject = new huobiAuthentication(endpointID, accessKeyId, secretKey)
-    //     const urlFromObject = urlObject.buildUrl()
-    //     isTheSame(url, urlFromObject)
-    //     console.log("url get", url)
-    //     console.log("urlFromObject", urlFromObject)
-    //     const res = await fetch(urlFromObject)
-    //     const huobiCommon = await res.json()
-    //
-    //
-    //     if (huobiCommon) {
-    //         return {
-    //             body: { huobiCommon }
-    //         };
-    //     }
-    //
-    //     return {
-    //         status: 404
-    //     };
-    // }
-
+    let auth = new Authentication(accessKeyId, secretKey)
+    let urlBuild = new urlBuilder(endpointAccountBalance, "1", auth.getAccessKeyId(), auth.getSecretKeyId())
+    let url = urlBuild.getUrl()
+    let requestBuild = new requestBuilder(url)
+    data = requestBuild.get(url)
 
     onMount(() => {
-        response = huobiClient.get(huobiClient.buildUrl())
-
-        console.log("build url", huobiClient.buildUrl())
-        console.log("response", response)
+        console.log("data", data)
     })
-
 </script>
 
 <div class="flex flex-col gap-4 items-center mx-auto my-auto w-80 h-80 bg-blue-200">
