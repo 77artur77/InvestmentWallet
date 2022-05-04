@@ -1,113 +1,132 @@
 import hmacSHA256 from 'crypto-js/hmac-sha256';
 import Base64 from 'crypto-js/enc-base64';
 
-export class requestBuilder {
-    url: string
-    constructor(url) {
-        this.url = url
+
+interface HuobiRequest {
+    method: string
+    host: string
+    path: string
+    parameters: string
+}
+
+export class HuobiClient {
+    authentication: Authentication
+    urlBuilder: UrlBuilder
+
+    constructor(authentication: Authentication, urlBuilder: UrlBuilder) {
+        this.authentication = authentication
+        this.urlBuilder = urlBuilder
     }
 
-    async get(url) {
-        const res = await fetch(url)
-        const data = await res.json()
-        if (data) {
-            return {
-                body: { data }
+    static default(host: string, accessKey: string, secretKey: string): HuobiClient {
+        return new HuobiClient(
+            new Authentication(secretKey),
+            new UrlBuilder(host, accessKey)
+        )
+    }
+
+    async getAccountID(orderID: string): Promise<string> {
+        const path = "/v1/account/accounts"
+        const parameters = {
+            'order-id': orderID
+        };
+        let request = this.urlBuilder.build("GET", path, parameters);
+        return this.makeRequest(request)
+    }
+
+    async getBalance(accountId: string, orderID: string): Promise<string> {
+        const path = `/v1/account/accounts/${accountId}/balance`
+        const parameters = {
+            'order-id': orderID
+        };
+        let request = this.urlBuilder.build("GET", path, parameters);
+        return this.makeRequest(request)
+    }
+
+     async getValuation(): Promise<string> {
+        const path = `/v2/account/valuation`
+        const parameters = {
+        };
+        let request = this.urlBuilder.build("GET", path, parameters);
+        return this.makeRequest(request)
+    }
+
+     async getAccountHistory(accountId: string): Promise<string> {
+            const path = `/v1/account/history`
+            const parameters = {
+                "account-id": accountId
             };
+            let request = this.urlBuilder.build("GET", path, parameters);
+            console.log("request history", request)
+            return this.makeRequest(request)
         }
 
-        return {
-            status: 404
-        }
+
+    async makeRequest(request: HuobiRequest): Promise<any> {
+        const signedRequest = this.authentication.sign(request)
+        let response = await fetch(`https://${signedRequest.host}${signedRequest.path}?${signedRequest.parameters}`)
+        let responseJson = response.json()
+        return await responseJson
     }
 }
 
-export class urlBuilder {
-    private endpoint: string
-    private orderId: string
-    private accessKeyId: string
-    private secretKeyId: string
-    private url: string
-
-    private hostUrl: string = "api.huobi.pro"
-    private signatureMethod: string = "HmacSHA256"
-    private signatureVersion: string = "2"
-
-    private currentDate: string = new Date(Date.now()).toISOString().slice(0, 19).replace(":", "%3A").replace(":", "%3A")
-
-    constructor(endpoint, orderId, accessKeyId, secretKeyId) {
-        this.endpoint = endpoint
-        this.orderId = orderId
-        this.accessKeyId = accessKeyId
-        this.secretKeyId = secretKeyId
-    }
-
-    setEndpoint(endpoint) {
-        this.endpoint = endpoint
-    }
-
-    setHostUrl(hostUrl) {
-        this.hostUrl = hostUrl
-    }
-
-    getHostUrl() {
-        return this.hostUrl
-    }
-
-    setSignatureMethod(signatureMethod) {
-        this.signatureMethod = signatureMethod
-    }
-
-    getSignatureMethod() {
-        return this.signatureMethod
-    }
-
-    setSignatureVersion(signatureVersion) {
-        this.signatureMethod = signatureVersion
-    }
-
-    getSignatureVersion() {
-        return this.signatureVersion
-    }
-
-    private buildParameters() {
-        return `AccessKeyId=${this.accessKeyId}&SignatureMethod=${this.signatureMethod}&SignatureVersion=${this.signatureVersion}&Timestamp=${this.currentDate}&order-id=${this.orderId}`
-    }
-
-    private buildSignature() {
-        const preSignedText = `GET\n${this.hostUrl}\n${this.endpoint}\n${this.buildParameters()}`
-        const hash256 = hmacSHA256(preSignedText, this.secretKeyId);
-        const base64 = Base64.stringify(hash256)
-        return base64
-    }
-
-    private buildUrl() {
-        let parameters = this.buildParameters()
-        let signature = this.buildSignature()
-        const url = `https://${this.hostUrl}${this.endpoint}?${parameters}&Signature=${signature}`
-        this.url = url
-    }
-
-    getUrl () {
-        this.buildUrl()
-        return this.url
-    }
-}
 
 export class Authentication {
-    private accessKeyId: string
-    private secretKeyId: string
+    secretKey: string
 
-    constructor(accessKeyId, secretKeyId) {
-        this.accessKeyId = accessKeyId
-        this.secretKeyId = secretKeyId
+    constructor(secretKey: string) {
+        this.secretKey = secretKey
     }
 
-    getAccessKeyId() {
-        return this.accessKeyId
+    sign(request: HuobiRequest): HuobiRequest {
+        const wholeUrl = `${request.method}\n${request.host}\n${request.path}\n${request.parameters}`
+        console.log("whole Url before sign", wholeUrl)
+        const signedHash256 = hmacSHA256(wholeUrl, this.secretKey);
+        const signedBase64 = Base64.stringify(signedHash256)
+        request.parameters = request.parameters + "&Signature=" + signedBase64
+        console.log("request", JSON.stringify(request))
+        return request
     }
 
-    getSecretKeyId() {
-        return this.secretKeyId
+
+}
+
+export class UrlBuilder {
+    host: string
+    accessKey: string
+
+    constructor(host: string, accessKey: string) {
+        this.host = host
+        this.accessKey = accessKey
     }
+
+    build(method: string, path: string, parameters: Record<string, string>): HuobiRequest {
+        let url = ""
+        return {
+            method: method,
+            host: this.host,
+            path: path,
+            parameters: this.parseParameters(parameters)
+        }
+    }
+
+    private parseParameters(parameters: Record<string, string>): string {
+        let params2: Record<string, string> = {}
+        params2['AccessKeyId'] = this.accessKey
+        params2['SignatureMethod'] = 'HmacSHA256'
+        params2['SignatureVersion'] = '2'
+        // parameters['Timestamp'] = new Date(Date.now()).toISOString().slice(0, 19).replace(":", "%3A").replace(":", "%3A")
+        params2['Timestamp'] = new Date(Date.now()).toISOString().slice(0, 19)
+        params2 = {...params2,
+            ...parameters}
+        let params: string[] = []
+
+        for (let parametersKey in params2) {
+            params.push(parametersKey + '=' + encodeURIComponent(params2[parametersKey]))
+        }
+        const paramsString = params.join("&")
+
+        return paramsString
+    }
+
 }

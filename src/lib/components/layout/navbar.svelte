@@ -30,9 +30,6 @@
     <li class="mx-3">
         <a class="flex font-bold bg-blue-400 hover:bg-blue-500 px-4 py-2 bg-red-500" href={Routes.HISTORY}>History</a>
     </li>
-    <li class="mx-3">
-        <a class="flex font-bold bg-blue-400 hover:bg-blue-500 px-4 py-2 bg-red-500" href={Routes.BILLING}>Billing</a>
-    </li>
     <li class="mx-3 mt-28">
         <a class="flex font-bold bg-blue-400 hover:bg-blue-500 px-4 py-2 bg-red-500" on:click={logout} href={Routes.LOGOUT}>Logout</a>
     </li>

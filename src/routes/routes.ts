@@ -10,6 +10,5 @@ export enum Routes {
     INVEST = "/dashboard/invest",
     PROFILE = "/dashboard/profile",
     HISTORY = "/dashboard/history",
-    BILLING = "/dashboard/billing",
 
 }
