@@ -1,4 +1,4 @@
-The project is called InvesttmentWallet. I connected with the APi of the Huobi exchange. At the current stage of development, Huobi Client is made, which, among others, downloads the current state of the wallet, available funds. Account Stories.
+The project is called InvestmentWallet. I connected with the APi of the Huobi exchange. At the current stage of development, Huobi Client is made, which, among others, downloads the current state of the wallet, available funds. Account history.
 
 https://huobiapi.github.io/docs/#change-log
 
