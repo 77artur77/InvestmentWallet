@@ -18,14 +18,14 @@ export class HuobiClient {
         this.urlBuilder = urlBuilder
     }
 
-    static default(host: string, accessKey: string, secretKey: string): HuobiClient {
+    static  default(host: string, accessKey: string, secretKey: string): HuobiClient {
         return new HuobiClient(
             new Authentication(secretKey),
             new UrlBuilder(host, accessKey)
         )
     }
 
-    async getAccountID(orderID: string): Promise<string> {
+    async getAccounts(orderID: string): Promise<string> {
         const path = "/v1/account/accounts"
         const parameters = {
             'order-id': orderID
@@ -43,9 +43,11 @@ export class HuobiClient {
         return this.makeRequest(request)
     }
 
-     async getValuation(): Promise<string> {
-        const path = `/v2/account/valuation`
+     async getValuationUSD(): Promise<string> {
+        const path = `/v2/account/asset-valuation`
         const parameters = {
+            "accountType": "spot",
+            "valuationCurrency": "USD"
         };
         let request = this.urlBuilder.build("GET", path, parameters);
         return this.makeRequest(request)
@@ -58,6 +60,15 @@ export class HuobiClient {
             };
             let request = this.urlBuilder.build("GET", path, parameters);
             console.log("request history", request)
+            return this.makeRequest(request)
+        }
+
+     async getAvailableCurrencies(): Promise<string> {
+            const path = `/market/tickers`
+            const parameters = {
+            };
+            let request = this.urlBuilder.build("GET", path, parameters);
+            console.log("getAvailableCurrencies", request)
             return this.makeRequest(request)
         }
 
@@ -80,15 +91,12 @@ export class Authentication {
 
     sign(request: HuobiRequest): HuobiRequest {
         const wholeUrl = `${request.method}\n${request.host}\n${request.path}\n${request.parameters}`
-        console.log("whole Url before sign", wholeUrl)
         const signedHash256 = hmacSHA256(wholeUrl, this.secretKey);
         const signedBase64 = Base64.stringify(signedHash256)
         request.parameters = request.parameters + "&Signature=" + signedBase64
         console.log("request", JSON.stringify(request))
         return request
     }
-
-
 }
 
 export class UrlBuilder {
@@ -101,7 +109,6 @@ export class UrlBuilder {
     }
 
     build(method: string, path: string, parameters: Record<string, string>): HuobiRequest {
-        let url = ""
         return {
             method: method,
             host: this.host,

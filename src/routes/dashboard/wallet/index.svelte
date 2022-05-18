@@ -2,68 +2,117 @@
     import {onMount} from "svelte";
     import {goto} from "$app/navigation";
     import {Routes} from "../../routes.ts";
-    import {Authentication, HuobiClient, UrlBuilder} from "./huobi-client.ts";
+    import LoadingIndicator from "../../../lib/components/LoadingIndicator.svelte";
+    import ErrorMessage from "../../../lib/components/ErrorMessage.svelte";
 
-    export let data
-    let walletBalance = 0
-    let walletBalanceChange = 0
+    let walletBalance: string
+    let accountsResponse: AccountsResponse
+    let spotAccountID: number
+    let valuationAccount: ValuationAccount
+    let errorMessage: string = ""
+    let isLoading: boolean = false
 
-    const host = "api.huobi.pro"
-    const accessKeyId = "yh4fhmvs5k-3bd3a0a7-a2f59525-aacf6"
-    const secretKey = "7822678b-d7a5b6dc-5e0afc87-61fca"
-    const accountId = "9570946"
-    const endpoint = "/v1/order/orders"
-    const endpointID = "/v1/account/accounts"
-    const endpointAccountBalance = "/v1/account/accounts/9570946/balance"
-    const endpointHistory = "/v1/account/history?account-id=9570946"
-
-    export let response
-    async function getAccountID() {
-        return await fetch('/dashboard/wallet')
+    $: {
+        walletBalance = getBalanceUSD(valuationAccount)
+        spotAccountID = getSpotAccountId(accountsResponse)
+        console.log("valuation", valuationAccount)
+        console.log("walletBalance", walletBalance)
+        console.log("accounts", accountsResponse)
+        console.log("spotAccountID", spotAccountID)
     }
 
-    export async function get(accountId: string, orderID: string) {
-        const host = "api.huobi.pro"
-        const accessKeyId = "yh4fhmvs5k-3bd3a0a7-a2f59525-aacf6"
-        const secretKey = "7822678b-d7a5b6dc-5e0afc87-61fca"
-        const client = HuobiClient.default(host, accessKeyId, secretKey)
-        console.log("we are here")
-        let response = await client.getBalance(accountId, orderID)
-
-        return {
-            status: 200,
-            body: response
-        };
-
+    interface ValuationAccount {
+        code: number,
+        data: {
+            balance: string,
+            timestamp: number
+        },
+        ok: boolean
     }
 
-    onMount(() => {
-        // response = getAccountID()
-        response = get(accountId, "1")
-        // <!--let client = HuobiClient.default(host, accessKeyId, secretKey)-->
-        // <!--let huobiAccounts =  client.getAccountID("1")-->
-        // <!--let huobiBalance = client.getBalance(accountId, "2")-->
-        // <!--let huobiValution = client.getValuation()-->
-        // <!--let huobiHistory = client.getAccountHistory(accountId)-->
-        // <!--console.log("huobiAccountId", huobiAccounts)-->
-        // console.log("huobiBalance", huobiBalance)
-        // console.log("huobiValution", huobiValution)
-        // console.log("huobiHistory", huobiHistory)
-        console.log("item", response)
+    interface Account {
+        id: number,
+        state: string,
+        subtype: string,
+        type: string,
+    }
 
+    interface AccountsResponse {
+        data: Account[],
+        ok: boolean,
+    }
+
+    async function getAccounts() {
+        isLoading = true
+        errorMessage = ""
+        try {
+            let result = await fetch("/dashboard/wallet/balance-get")
+            return await result.json()
+        } catch (error) {
+            errorMessage = error.toString()
+        } finally {
+            isLoading = false
+        }
+    }
+
+    function getSpotAccountId(accounts: AccountsResponse): number {
+        if(accounts === undefined || accounts === null) {
+            return
+        }
+        if(accounts.data === undefined || accounts.data === null) {
+            return
+        }
+        let availableAccounts: Account[] = accounts.data
+        let spotAccount = availableAccounts.find((element) => {
+            if(element.type === "spot") {
+                return element.type
+            }
+        })
+        return spotAccount.id
+    }
+
+    async function getValuationAccount() {
+        isLoading = true
+        errorMessage = ""
+        try {
+            let result = await fetch("/dashboard/wallet/valuation-get")
+            return await result.json()
+        } catch (error) {
+            errorMessage = error.toString()
+        }
+        finally {
+            isLoading = false
+        }
+    }
+
+    function getBalanceUSD(valuationAccount: ValuationAccount): string {
+        if(valuationAccount === undefined || valuationAccount === null){
+            return "0"
+        }
+        if(valuationAccount.code !== 200){
+            console.log("valuation code !== 200")
+            return "0"
+        }
+        return valuationAccount.data.balance
+    }
+
+    onMount(async () => {
+        valuationAccount = await getValuationAccount()
+        accountsResponse = await getAccounts()
     })
 </script>
 
-<div class="flex flex-col gap-4 items-center mx-auto my-auto w-80 h-80 bg-blue-200">
-    <p class="p-2">Your wallet</p>
-    <div class="w-full flex justify-center p-2 bg-blue-500" >
-        <p>Your balance: {walletBalance}</p>
+{#if isLoading}
+    <LoadingIndicator/>
+{:else}
+    <div class="flex flex-col gap-4 items-center mx-auto s w-80 h-80 bg-blue-200">
+        <p class="p-2">Your wallet</p>
+        <ErrorMessage errorMessage={errorMessage}/>
+        <div class="w-full flex justify-center p-2 bg-blue-500" >
+            <p>Your balance: {walletBalance} USD</p>
+        </div>
+        <button class="p-2 bg-green-700" on:click={() => goto("https://www.huobi.com/en-us")}>Invest More</button>
+        <button class="p-2 bg-yellow-300" on:click={() => goto(Routes.WALLET_DETAILS)}>Details</button>
     </div>
-    <div class="w-full flex justify-center p-2 bg-blue-500">
-        <p>Change (24h): {walletBalanceChange}</p>
-    </div>
-
-    <button class="p-2 bg-green-700" on:click={() => goto("https://www.huobi.com/en-us")}>Invest More</button>
-    <button class="p-2 bg-yellow-300" on:click={() => goto(Routes.WALLET_DETAILS)}>Details</button>
-</div>
+{/if}
 
