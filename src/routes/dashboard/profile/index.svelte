@@ -5,15 +5,15 @@
     import {goto} from "$app/navigation"
     import {Routes} from "../../routes";
 
-    let newPassword = "",
-        repeatPassword = "",
-        errorMessage = "ss",
-        passwordUpdated = false,
-        emailUpdated = false,
-        isLoading = false,
-        newEmail = "",
-        context = "",
-        username = ""
+    let newPassword: string = "",
+        repeatPassword: string = "",
+        errorMessage: string = "",
+        passwordUpdated: boolean = false,
+        emailUpdated: boolean = false,
+        isLoading: boolean = false,
+        newEmail: string = "",
+        context: string = "",
+        username: string = ""
 
     const auth = getAuth()
     const user = auth.currentUser

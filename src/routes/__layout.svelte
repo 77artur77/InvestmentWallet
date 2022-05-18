@@ -22,7 +22,6 @@
             }
         } )
 	})
-    $:console.log("isLoggedIn", isLoggedIn)
 </script>
 
 <div class="grid grid-cols-10">
